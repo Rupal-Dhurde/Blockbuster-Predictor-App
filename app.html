@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE BLOCKBUSTERs - Success Predictor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #141414;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+            background-image: linear-gradient(rgba(20, 20, 20, 0.95), rgba(20, 20, 20, 1)), url('https://placehold.co/1920x1080/000000/FFFFFF?text=Movie+Collage&font=sans');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        .netflix-red { color: #E50914; }
+        .netflix-red-bg { background-color: #E50914; }
+        .form-input {
+            background-color: #333333;
+            border: 1px solid #555555;
+            color: #ffffff;
+            transition: all 0.2s ease-in-out;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #E50914;
+            box-shadow: 0 0 10px rgba(229, 9, 20, 0.5);
+        }
+        .predict-btn {
+            font-family: 'Bebas Neue', cursive;
+            letter-spacing: 2px;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+        }
+        .predict-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(229, 9, 20, 0.7);
+        }
+        .predict-btn .spinner {
+            display: none;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s ease-in-out infinite;
+        }
+        .predict-btn.loading .spinner { display: block; }
+        .predict-btn.loading span { visibility: hidden; }
+        @keyframes spin { to { transform: rotate(3D); } }
+        #resultModal {
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+        }
+        .modal-card {
+            background-color: #181818;
+            border: 1px solid #333;
+            overflow: hidden;
+        }
+        .hit { color: #2ecc71; }
+        .flop { color: #e74c3c; }
+        .blockbuster { color: #f1c40f; }
+
+        /* Animations */
+        @keyframes ghost-float {
+            0% { transform: translateY(0) rotate(-5deg); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(-150px) rotate(10deg); opacity: 0; }
+        }
+        .ghost-animation .ghost {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            margin-left: -50px;
+            width: 100px;
+            height: 120px;
+            background: #fff;
+            border-radius: 50px 50px 0 0;
+            animation: ghost-float 3s ease-in-out forwards;
+        }
+        .ghost::before, .ghost::after {
+            content: '';
+            position: absolute;
+            background: #181818;
+            height: 15px;
+            width: 15px;
+            border-radius: 50%;
+            top: 40px;
+        }
+        .ghost::before { left: 25px; }
+        .ghost::after { right: 25px; }
+
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100%) rotateZ(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotateZ(720deg); opacity: 0; }
+        }
+        .confetti-animation .confetti {
+            position: absolute;
+            top: 0;
+            width: 10px;
+            height: 20px;
+            opacity: 0;
+            animation: confetti-fall 4s linear infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="p-4 md:p-6 text-center">
+        <h1 class="text-5xl md:text-7xl font-black netflix-red" style="font-family: 'Bebas Neue', cursive;">THE BLOCKBUSTERs</h1>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-6">
+        <div class="max-w-4xl mx-auto bg-black bg-opacity-60 rounded-xl shadow-lg p-8 border border-gray-800">
+            <h2 class="text-3xl font-bold text-center mb-2">Predict Your Next Blockbuster</h2>
+            <p class="text-gray-400 text-center mb-8">Enter the details of a real or imagined movie to see its success potential.</p>
+            
+            <form id="predictionForm" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <div class="md:col-span-2">
+                    <label for="movieTitle" class="block text-sm font-medium text-gray-300 mb-1">MOVIE TITLE</label>
+                    <input type="text" id="movieTitle" class="w-full p-3 rounded-md form-input" placeholder="e.g., Galactic Echoes" required>
+                </div>
+
+                 <div class="md:col-span-2">
+                    <label for="moviePoster" class="block text-sm font-medium text-gray-300 mb-1">MOVIE POSTER URL</label>
+                    <input type="url" id="moviePoster" class="w-full p-3 rounded-md form-input" placeholder="https://image.tmdb.org/t/p/w500/poster.jpg">
+                </div>
+
+                <div>
+                    <label for="budget" class="block text-sm font-medium text-gray-300 mb-1">BUDGET (in USD)</label>
+                    <input type="number" id="budget" class="w-full p-3 rounded-md form-input" placeholder="e.g., 150000000" required>
+                </div>
+                
+                <div>
+                    <label for="runtime" class="block text-sm font-medium text-gray-300 mb-1">RUNTIME (in Minutes)</label>
+                    <input type="number" id="runtime" class="w-full p-3 rounded-md form-input" placeholder="e.g., 148" required>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label for="genres" class="block text-sm font-medium text-gray-300 mb-1">GENRES</label>
+                    <select id="genres" multiple class="w-full p-3 rounded-md form-input h-32">
+                        <option>Action</option><option selected>Adventure</option><option>Animation</option><option>Comedy</option><option>Crime</option><option>Drama</option><option>Fantasy</option><option selected>Science Fiction</option><option>Thriller</option><option>Horror</option><option>Family</option><option>Mystery</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="director" class="block text-sm font-medium text-gray-300 mb-1">DIRECTOR</label>
+                    <input type="text" id="director" class="w-full p-3 rounded-md form-input" placeholder="e.g., Christopher Nolan">
+                </div>
+
+                <div>
+                    <label for="mainActor" class="block text-sm font-medium text-gray-300 mb-1">MAIN ACTOR</label>
+                    <input type="text" id="mainActor" class="w-full p-3 rounded-md form-input" placeholder="e.g., Zendaya">
+                </div>
+                
+                <div class="md:col-span-2 mt-6">
+                    <button type="submit" id="predictBtn" class="w-full text-2xl p-4 netflix-red-bg text-white font-bold rounded-md predict-btn flex items-center justify-center">
+                        <span class="spinner"></span>
+                        <span>Predict Success</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <div id="resultModal" class="fixed inset-0 w-full h-full flex items-center justify-center p-4 z-50 hidden">
+        <div class="modal-card rounded-xl shadow-2xl w-full max-w-md mx-auto text-center p-8 relative">
+            <div id="animation-container" class="absolute inset-0"></div>
+            <button id="closeModal" class="absolute top-4 right-4 text-3xl text-gray-500 hover:text-white z-20">&times;</button>
+            
+            <img id="resultPoster" src="" alt="Movie Poster" class="w-48 h-72 object-cover rounded-lg mx-auto mb-6 shadow-lg border-2 border-gray-600" onerror="this.src='https://placehold.co/200x300/000000/FFFFFF?text=Poster+Not+Found'">
+            
+            <h2 id="resultMovieTitle" class="text-3xl font-bold mb-4" style="font-family: 'Bebas Neue', cursive;"></h2>
+            
+            <div class="text-7xl font-black mb-2" id="predictionText"></div>
+            <p id="predictionMessage" class="text-lg text-gray-300"></p>
+        </div>
+    </div>
+    
+    <script>
+        const form = document.getElementById('predictionForm');
+        const modal = document.getElementById('resultModal');
+        const closeModalBtn = document.getElementById('closeModal');
+        const predictBtn = document.getElementById('predictBtn');
+        const animationContainer = document.getElementById('animation-container');
+
+        const A_LIST_TALENT = ['christopher nolan', 'greta gerwig', 'denis villeneuve', 'steven spielberg', 'tom hanks', 'zendaya', 'leonardo dicaprio', 'margot robbie', 'dwayne johnson'];
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            predictBtn.classList.add('loading');
+            predictBtn.disabled = true;
+
+            setTimeout(() => {
+                const movieTitle = document.getElementById('movieTitle').value;
+                const moviePoster = document.getElementById('moviePoster').value;
+                const budget = parseFloat(document.getElementById('budget').value) / 1000000 || 0; // Convert to millions for logic
+                const genres = Array.from(document.getElementById('genres').selectedOptions).map(opt => opt.value);
+                const director = document.getElementById('director').value.toLowerCase();
+                const mainActor = document.getElementById('mainActor').value.toLowerCase();
+
+                const { prediction, score } = simulatePrediction(budget, genres, director, mainActor);
+                
+                displayResult(movieTitle, moviePoster, prediction, score);
+                
+                predictBtn.classList.remove('loading');
+                predictBtn.disabled = false;
+            }, 2000);
+        });
+
+        closeModalBtn.addEventListener('click', () => modal.classList.add('hidden'));
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+
+        function simulatePrediction(budget, genres, director, mainActor) {
+            let score = 50;
+
+            if (budget > 120) score += 20;
+            else if (budget > 50) score += 10;
+            else if (budget < 20) score -= 10;
+
+            const hitGenres = ['Adventure', 'Science Fiction', 'Action', 'Animation', 'Family'];
+            score += genres.reduce((acc, genre) => hitGenres.includes(genre) ? acc + 7 : acc - 3, 0);
+
+            if (A_LIST_TALENT.includes(director)) score += 15;
+            if (A_LIST_TALENT.includes(mainActor)) score += 15;
+            
+            let finalScore = Math.min(99, Math.max(1, score + Math.random() * 10 - 5));
+            let prediction;
+            if (finalScore > 85) prediction = 'BLOCKBUSTER';
+            else if (finalScore > 55) prediction = 'HIT';
+            else prediction = 'FLOP';
+            
+            return { prediction, score: Math.round(finalScore) };
+        }
+
+        function displayResult(title, posterUrl, prediction, score) {
+            document.getElementById('resultMovieTitle').innerText = title;
+            document.getElementById('resultPoster').src = posterUrl || `https://placehold.co/200x300/000000/FFFFFF?text=${encodeURIComponent(title)}`;
+            
+            const predictionTextEl = document.getElementById('predictionText');
+            const predictionMessageEl = document.getElementById('predictionMessage');
+
+            animationContainer.innerHTML = '';
+            animationContainer.className = 'absolute inset-0';
+
+            predictionTextEl.innerText = prediction;
+            if (prediction === 'BLOCKBUSTER') {
+                predictionTextEl.className = 'text-7xl font-black mb-2 blockbuster';
+                predictionMessageEl.innerText = 'This is destined for greatness!';
+                triggerConfetti();
+            } else if (prediction === 'HIT') {
+                predictionTextEl.className = 'text-7xl font-black mb-2 hit';
+                predictionMessageEl.innerText = 'Looks like a success story!';
+                triggerConfetti();
+            } else {
+                predictionTextEl.className = 'text-7xl font-black mb-2 flop';
+                predictionMessageEl.innerText = 'Uh oh... This might not go well.';
+                triggerGhost();
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function triggerGhost() {
+            animationContainer.classList.add('ghost-animation');
+            const ghost = document.createElement('div');
+            ghost.className = 'ghost';
+            animationContainer.appendChild(ghost);
+        }
+
+        function triggerConfetti() {
+            animationContainer.classList.add('confetti-animation');
+            const colors = ['#2ecc71', '#f1c40f', '#3498db', '#e74c3c', '#9b59b6'];
+            for (let i = 0; i < 50; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDelay = Math.random() * 4 + 's';
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                animationContainer.appendChild(confetti);
+            }
+        }
+    </script>
+
+</body>
+</html>
+
+
